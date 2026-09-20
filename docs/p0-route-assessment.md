@@ -11,8 +11,8 @@
 | 路线 | 已验证事实 | 当前结论 |
 |---|---|---|
 | A：Linux Docker Runtime | WechatOnCloud 可启动、可扫码、可生成持久化数据目录；重启后需要手机再次确认；消息数据库未形成可维护读取方式 | 不足以直接进入消息归档开发 |
-| B：外置 Windows Agent | 当前主机没有 Windows Agent 或真实 Windows 微信数据读取证据 | 未验证 |
-| C：离线数据导入 | 不依赖服务器常驻微信，但需要定义合法、稳定、可脱敏的输入格式；当前尚无真实导入样本 | 可作为降级/替代路线，待样本验证 |
+| B：外置 Windows Agent | 当前主机没有 Windows Agent 或真实 Windows 微信数据读取证据；PyWxDump 文档显示其可在 Windows 侧定位、解密和导出微信数据库，但尚未在隔离 Windows 环境验证 | 有候选，但不能作为已验证路线 |
+| C：离线数据导入 | 不依赖服务器常驻微信；WxBackup 的公开文档明确不支持把 Windows 微信聊天记录导入/迁移到其产品；仍需要定义本项目自己的合法、稳定、可脱敏输入格式 | 可作为降级/替代路线，待样本验证 |
 
 详细证据见 [`docs/p0-feasibility-report.md`](./p0-feasibility-report.md)。
 
@@ -38,9 +38,19 @@ WeChat Runtime 的“能登录”与 Archive 的“能读取消息”是两个�
 在没有稳定消息读取方式之前，不实现针对 WechatOnCloud 内部数据库的猜测性解密代码。下一步按以下顺序推进：
 
 1. 补齐 P0-02 的隔离账号记录，不在仓库提交账号信息；
-2. 获取一个合法、脱敏、可重复使用的 Windows Agent 或离线导入样本；
-3. 为样本定义版本化输入协议，验证联系人、会话、文本消息和一种媒体；
-4. 只有样本可重复读取后，才进入 Phase 1 的归档数据库和 Fixture 实现。
+2. 准备一台可运行 Windows 微信的隔离环境，评估 PyWxDump 是否能稳定导出本项目所需的最小样本；
+3. 如果无法提供 Windows 环境，则改走 C，先取得合法、脱敏、可重复使用的离线导入样本；
+4. 为样本定义版本化输入协议，验证联系人、会话、文本消息和一种媒体；
+5. 只有样本可重复读取后，才进入 Phase 1 的归档数据库和 Fixture 实现。
+
+### 3.1 外部候选核验记录
+
+- [PyWxDump README](https://github.com/JellyHoney/PyWxDump)：公开说明包含微信信息读取、数据库解密、聊天查看和 HTML/CSV 导出能力，同时注明当前只在 Windows 测试；这证明了候选能力边界，但不等于已验证可作为本项目 Agent。
+- [PyWxDump 用户指南](https://github.com/JellyHoney/PyWxDump/blob/master/doc/UserGuide.md)：公开命令包含 `wx_path`、`decrypt`、`ui` 和 `api`，并提供 Python 调用示例；其 `all` 模式已标记废弃，不能直接把该命令当成稳定协议。
+- [PyWxDump LICENSE](https://github.com/JellyHoney/PyWxDump/blob/master/LICENSE)：代码采用 MIT License；但 README 同时包含“仅供学习交流”和“不允许二次开发”等项目声明，正式集成前必须完成法律、供应链和安全审查。
+- [WxBackup README](https://github.com/weibeifen/wxbackup)：其 FAQ 明确回答“不支持把 Windows 微信上的聊天记录迁移/导入到微备份”，因此它不是本项目所需的 Windows Agent 输入桥接方案。
+
+本节只记录公开文档核验结果，没有下载、安装或运行上述第三方工具，也没有把它们引入仓库依赖。
 
 ## 4. 决策门槛
 
@@ -52,6 +62,8 @@ WeChat Runtime 的“能登录”与 Archive 的“能读取消息”是两个�
 - 输出协议不依赖 Archive 直接猜测微信内部数据库密钥；
 - Agent 与服务器之间有认证、断点、重试和数据清理边界；
 - 至少一份脱敏样本可以重复导入。
+
+当前候选 PyWxDump 还额外需要确认：微信版本变化后的兼容性、导出过程中是否修改源目录、是否能导出媒体关联，以及其 API 是否足够稳定。未完成这些验证前，不能勾选 P0-12。
 
 ### 选择 C：离线导入
 
