@@ -217,7 +217,11 @@ def validate_records(package_root: Path, manifest: dict[str, Any]) -> dict[str, 
             int(expected_hash, 16)
         except ValueError as exc:
             raise ValidationError(f"{context}: sha256 must be hexadecimal") from exc
-        media_path = safe_relative_path(attachment.get("path"), package_root, context)
+        relative_media_path = required_string(attachment, "path", context)
+        normalized_media_path = posixpath.normpath(relative_media_path)
+        if not normalized_media_path.startswith("media/"):
+            raise ValidationError(f"{context}: media path must be under media/")
+        media_path = safe_relative_path(relative_media_path, package_root, context)
         actual_hash, actual_size = sha256_and_size(media_path)
         if actual_hash != expected_hash.lower():
             raise ValidationError(f"{context}: media hash mismatch")

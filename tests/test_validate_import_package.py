@@ -97,7 +97,33 @@ class ImportPackageValidatorTests(unittest.TestCase):
         attachments = package / "attachments.ndjson"
         attachments.write_text(attachments.read_text(encoding="utf-8").replace('"path":"media/', '"path":"../'), encoding="utf-8")
         update_manifest_file_hash(package, "attachments.ndjson")
-        with self.assertRaisesRegex(ValidationError, "path escapes package root"):
+        with self.assertRaisesRegex(ValidationError, "media path must be under media/"):
+            validate(package)
+
+    def test_rejects_media_path_outside_media_directory(self) -> None:
+        package = self.copy_fixture()
+        attachments = package / "attachments.ndjson"
+        record = json.loads(attachments.read_text(encoding="utf-8"))
+        record["path"] = "contacts.ndjson"
+        attachments.write_text(json.dumps(record) + "\n", encoding="utf-8")
+        update_manifest_file_hash(package, "attachments.ndjson")
+        with self.assertRaisesRegex(ValidationError, "media path must be under media/"):
+            validate(package)
+
+    def test_rejects_symlink_media(self) -> None:
+        package = self.copy_fixture()
+        media = next((package / "media").iterdir())
+        linked = package / "media" / "linked-media"
+        try:
+            linked.symlink_to(media.name)
+        except OSError as exc:
+            self.skipTest(f"symlink unavailable: {exc}")
+        attachments = package / "attachments.ndjson"
+        record = json.loads(attachments.read_text(encoding="utf-8"))
+        record["path"] = "media/linked-media"
+        attachments.write_text(json.dumps(record) + "\n", encoding="utf-8")
+        update_manifest_file_hash(package, "attachments.ndjson")
+        with self.assertRaisesRegex(ValidationError, "symbolic links are not allowed"):
             validate(package)
 
     def test_rejects_media_hash_mismatch(self) -> None:
