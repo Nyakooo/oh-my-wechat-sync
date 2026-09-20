@@ -60,6 +60,38 @@ class ImportPackageValidatorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "unknown source_contact_id"):
             validate(package)
 
+    def test_rejects_undeclared_optional_members_file(self) -> None:
+        package = self.copy_fixture()
+        manifest_path = package / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        del manifest["files"]["conversation-members.ndjson"]
+        manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValidationError, "optional file must be declared"):
+            validate(package)
+
+    def test_rejects_duplicate_member_pair(self) -> None:
+        package = self.copy_fixture()
+        members = package / "conversation-members.ndjson"
+        original = members.read_text(encoding="utf-8")
+        members.write_text(original + original, encoding="utf-8")
+        manifest_path = package / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["files"]["conversation-members.ndjson"]["records"] = 2
+        manifest["files"]["conversation-members.ndjson"]["sha256"] = sha256(members)
+        manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValidationError, "duplicate member pair"):
+            validate(package)
+
+    def test_accepts_package_without_optional_members_file(self) -> None:
+        package = self.copy_fixture()
+        (package / "conversation-members.ndjson").unlink()
+        manifest_path = package / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        del manifest["files"]["conversation-members.ndjson"]
+        manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+        counts = validate(package)
+        self.assertNotIn("conversation-members.ndjson", counts)
+
     def test_rejects_media_path_traversal(self) -> None:
         package = self.copy_fixture()
         attachments = package / "attachments.ndjson"

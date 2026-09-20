@@ -81,6 +81,14 @@ wechat-archive-import-v0/
 
 必需：`source_chat_id`、`kind`。`kind` 仅允许 `direct`、`group`、`unknown`。
 
+### 会话成员（可选）
+
+```json
+{"source_chat_id":"chat-1","source_contact_id":"contact-1"}
+```
+
+如果提供 `conversation-members.ndjson`，每条记录必须引用已存在的会话和联系人；同一个会话与联系人的组合不能重复。也可以只在会话记录的 `member_source_ids` 中提供成员，但两种来源不能产生互相矛盾的数据。
+
 ### 消息
 
 ```json
