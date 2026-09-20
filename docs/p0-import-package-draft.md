@@ -141,3 +141,13 @@ wechat-archive-import-v0/
 ## 7. 脱敏和提交边界
 
 仓库只允许提交字段说明、统计值、哈希和人工构造 fixture。不得提交真实聊天正文、手机号、微信号、头像原图、二维码、密钥、运行时目录或原始数据库。
+
+## 8. 当前校验工具
+
+仓库提供只读静态校验器 [`tools/validate_import_package.py`](../tools/validate_import_package.py)。它只检查目录格式、JSONL、manifest 记录数和 SHA-256、跨文件引用、媒体大小/哈希以及路径穿越；它不会导入归档库、修改源包、解密数据库或启动微信。
+
+```bash
+python3 tools/validate_import_package.py /path/to/wechat-archive-import-v0
+```
+
+该工具验证通过只代表“输入包符合草案格式”，不代表来源数据完整、来源工具稳定或路线 B/C 已通过 P0。
