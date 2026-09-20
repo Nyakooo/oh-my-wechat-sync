@@ -151,3 +151,9 @@ python3 tools/validate_import_package.py /path/to/wechat-archive-import-v0
 ```
 
 该工具验证通过只代表“输入包符合草案格式”，不代表来源数据完整、来源工具稳定或路线 B/C 已通过 P0。
+
+仓库中的 [`tests/fixtures/import-v0-minimal`](../tests/fixtures/import-v0-minimal) 是人工构造的正向 fixture，仅包含合成标识、合成文本和合成媒体，可用于验证校验器本身：
+
+```bash
+python3 tools/validate_import_package.py tests/fixtures/import-v0-minimal
+```

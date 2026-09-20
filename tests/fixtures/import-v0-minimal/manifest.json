@@ -1,0 +1,34 @@
+{
+  "format": "wechat-archive-import",
+  "format_version": 0,
+  "export_id": "synthetic-export-1",
+  "source": {
+    "kind": "offline-tool",
+    "tool_name": "synthetic-fixture",
+    "tool_version": "0.0.0",
+    "wechat_version": "synthetic"
+  },
+  "account": {
+    "source_account_id": "synthetic-account-1",
+    "display_name": "Synthetic Account"
+  },
+  "files": {
+    "contacts.ndjson": {
+      "records": 1,
+      "sha256": "ae9f147322692ee9ed79adac6913fbeb19ff141d941210924fbfe48e705f8265"
+    },
+    "conversations.ndjson": {
+      "records": 1,
+      "sha256": "98ec10fa2789b8e9e7f5e119c297e67263c9e2bf0d48b1fefdb4e12688f26087"
+    },
+    "messages.ndjson": {
+      "records": 1,
+      "sha256": "3613c2368c61b43d4bf99589200a59402cbf7d80ec4fd1d2d02d0a135d8d03b4"
+    },
+    "attachments.ndjson": {
+      "records": 1,
+      "sha256": "190c7b3efb789dfc18df56c11139a0797ffda156843d07dba59d5489014758da"
+    }
+  },
+  "created_at": "2026-09-20T00:00:00Z"
+}
