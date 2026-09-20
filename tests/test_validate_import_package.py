@@ -59,6 +59,13 @@ class ImportPackageValidatorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "path escapes package root"):
             validate(package)
 
+    def test_rejects_media_hash_mismatch(self) -> None:
+        package = self.copy_fixture()
+        media = next((package / "media").iterdir())
+        media.write_text("tampered-media\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValidationError, "media hash mismatch"):
+            validate(package)
+
 
 if __name__ == "__main__":
     unittest.main()
