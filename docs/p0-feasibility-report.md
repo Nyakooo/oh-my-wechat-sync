@@ -19,10 +19,10 @@
 | CPU | 4 vCPU | 已确认 |
 | 内存 | 约 7.1 GiB 可见内存 | 已确认 |
 | 微信版本 | 尚未固定 | 阻塞 |
-| 微信 Runtime | 尚未选择并验证 | 阻塞 |
+| 微信 Runtime | 已选 WechatOnCloud 作为候选，尚未启动验证 | 阻塞 |
 | 目标数据读取方式 | 尚未验证 | 阻塞 |
 
-因此 P0-01 当前为“环境基线已完成、Runtime/微信版本待固定”，不能勾选为完全完成。P0-02 至 P0-12 尚未满足退出条件。
+因此 P0-01 当前为“环境基线已完成、候选 Runtime 已锁定、微信版本待固定”，不能勾选为完全完成。P0-02 至 P0-12 尚未满足退出条件。
 
 ## 2. 已执行检查
 
@@ -56,6 +56,44 @@ HEAD：97dc7c6 docs: add project checklist and readme
 工作区：检查时干净
 ```
 
+## 3. 候选 Runtime 证据
+
+本轮将 [WechatOnCloud](https://github.com/Gloridust/WechatOnCloud) 作为候选 A 进行验证。其公开文档描述的运行方式是 Linux 原生微信 + Xvfb + KasmVNC，并由面板按需管理实例；候选项目声称支持 `amd64` 和 `arm64`。这些资料只能证明候选存在，不能证明本项目的只读数据读取链路成立。
+
+### 3.1 镜像 manifest
+
+2026-09-20 在当前 Docker Engine 上查询到以下多架构 manifest：
+
+```text
+wechat-on-cloud:1.4.9
+index digest: sha256:d6079c9b2b904fbdbec16b288535921369e826e334e0ea7b1a572b40b12b9a7c
+linux/amd64: sha256:1718856505d4702041a86b084607b87bce180464bd77cbcd4545573887b32682
+linux/arm64: sha256:fa95854a770dbc8b09b1f3b72095dcb047fe3c3656fb66c406f02ff988f079d5
+
+woc-panel:1.4.9
+index digest: sha256:2f7b4d7a2475c20ef08ff1b5ec96342ca5c8d028b9b97094f7b3ea22312d5a93
+linux/amd64: sha256:80fb02e5792d3d83434ad71be9065b5a2a5d4628dff2cd2241340ef2e6a0a972
+linux/arm64: sha256:4a997483b0360c5dd6f83b6774c2a55c18dec39b0567a7dbcfef9b59d468e181
+```
+
+当前主机是 `x86_64`，因此 P0 验证应固定使用上述 `linux/amd64` digest，而不是 `latest` 标签。候选项目的公开技术说明还提到官方 Linux 微信版本为 4.0，但实际容器中的下载/安装结果尚未在本主机确认，因此本报告仍将“微信版本”标为未固定。
+
+### 3.2 镜像获取结果
+
+曾按不可变 digest 两次执行：
+
+```text
+docker pull docker.io/gloridust/wechat-on-cloud@sha256:1718856505d4702041a86b084607b87bce180464bd77cbcd4545573887b32682
+```
+
+两次均因远端层下载中断失败，错误为：
+
+```text
+short read: expected <layer-bytes> bytes but got 0: unexpected EOF
+```
+
+因此当前没有可运行的本地 Runtime 镜像，也没有执行扫码、登录或数据读取。该结果是“镜像获取失败”，不是“Runtime 不支持”；后续可以在网络稳定的目标服务器或本地构建路线复测。
+
 ## 3. 目标环境冻结建议
 
 在 P0 期间先以以下组合作为复现基线：
@@ -75,7 +113,7 @@ Docker Compose：v5.4.0
 
 ### 4.1 Runtime 与微信版本
 
-当前仓库没有 Runtime 镜像、Compose 配置或微信安装包，因此还不能声称 Linux Docker Runtime 可用。下一步需要选定候选实现，并记录：
+当前仓库没有可运行的 Runtime 镜像或 Compose 配置；虽然候选镜像 manifest 已确认，但本地拉取失败，因此还不能声称 Linux Docker Runtime 可用。下一步需要记录：
 
 - Runtime 项目和具体版本/提交；
 - 微信客户端具体版本；
@@ -117,7 +155,7 @@ P0 必须使用专用隔离测试账号，不使用用户最重要的主账号�
 
 | 编号 | 下一步 | 前置条件 | 产物 |
 |---|---|---|---|
-| P0-01 | 选定候选 Runtime 和具体微信版本，补齐环境冻结信息 | 候选 Runtime 可获取 | 本报告第 1、3 节更新 |
+| P0-01 | 选定候选 Runtime 和具体微信版本，补齐环境冻结信息 | 候选 Runtime 可获取 | 本报告第 1、3 节更新；候选 Runtime 已选，微信版本仍待容器内确认 |
 | P0-02 | 准备隔离测试账号并填写本地记录模板 | 用户提供/操作专用账号 | `docs/p0-test-account-record.template.md` 的本地副本 |
 | P0-03 | 启动 Runtime，验证 Web 登录页/二维码 | P0-01、P0-02 | 启动日志和脱敏截图 |
 | P0-04 | 验证扫码登录和登录态持久化 | P0-03 | 登录/重启记录 |
@@ -130,9 +168,9 @@ P0 必须使用专用隔离测试账号，不使用用户最重要的主账号�
 
 ## 7. 当前路线判断
 
-暂不做最终路线选择：
+暂不做最终路线选择，当前评估状态：
 
-- Linux Docker Runtime：待验证；
+- Linux Docker Runtime：候选为 WechatOnCloud，manifest 已确认，但镜像下载两次失败，待在稳定网络环境重试；
 - 外置 Windows Agent：待评估；
 - 导入已有数据目录：可作为 A/B 均失败时的降级路线，但尚未实现。
 
