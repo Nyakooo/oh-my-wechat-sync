@@ -165,3 +165,11 @@ python3 tools/validate_import_package.py /path/to/wechat-archive-import-v0
 ```bash
 python3 tools/validate_import_package.py tests/fixtures/import-v0-minimal
 ```
+
+如需生成不包含账号标识和消息正文的证据摘要，可运行：
+
+```bash
+python3 tools/report_import_package.py --pretty /path/to/wechat-archive-import-v0
+```
+
+报告只输出格式、来源版本、记录数量、媒体类型和媒体总大小；命令仍然是只读的，不会导入归档库或修改输入包。
