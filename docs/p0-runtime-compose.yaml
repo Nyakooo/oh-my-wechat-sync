@@ -1,0 +1,16 @@
+# Phase 0 一次性验证配置，不是正式生产部署配置。
+# 只固定 Runtime 候选和临时数据卷，不包含 Archive 服务或 Docker Socket。
+services:
+  wechat-runtime:
+    image: ghcr.io/gloridust/wechat-on-cloud@sha256:1718856505d4702041a86b084607b87bce180464bd77cbcd4545573887b32682
+    container_name: wechat-archive-p0-runtime
+    shm_size: 1gb
+    restart: "no"
+    ports:
+      - "127.0.0.1:39012:3000"
+    environment:
+      PUID: "${P0_PUID:-1000}"
+      PGID: "${P0_PGID:-1000}"
+      TZ: "${P0_TZ:-Asia/Shanghai}"
+    volumes:
+      - "${P0_DATA_DIR:-../.p0-data/runtime}:/config"

@@ -38,6 +38,8 @@ Linux Docker Runtime、外置 Windows Agent 和离线数据导入目前都是候
 - [项目计划表](./项目计划表.md)：按阶段、任务和验收条件拆分的执行清单；
 - [P0 技术可行性验证报告](./docs/p0-feasibility-report.md)：当前主机基线、验证结论和下一步证据要求；
 - [P0 隔离测试账号记录模板](./docs/p0-test-account-record.template.md)：在仓库外记录测试账号和 Runtime 信息；
+- [P0 Runtime 验证运行手册](./docs/p0-runtime-validation-runbook.md)：启动固定候选 Runtime、扫码和回填验证证据；
+- [P0 一次性 Compose 配置](./docs/p0-runtime-compose.yaml)：仅用于 Phase 0 验证，不是生产部署配置；
 - [技术架构与可执行开发计划](./微信个人增量备份系统——技术架构与可执行开发计划.md)：完整架构、数据模型、同步流程、API、部署和风险说明。
 
 ## 开发顺序
