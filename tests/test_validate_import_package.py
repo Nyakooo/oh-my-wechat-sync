@@ -159,6 +159,35 @@ class ImportPackageValidatorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "must include a timezone"):
             validate(package)
 
+    def test_rejects_boolean_manifest_version(self) -> None:
+        package = self.copy_fixture()
+        manifest_path = package / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["format_version"] = False
+        manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValidationError, "only manifest.format_version 0 is supported"):
+            validate(package)
+
+    def test_rejects_boolean_message_timestamp(self) -> None:
+        package = self.copy_fixture()
+        messages = package / "messages.ndjson"
+        record = json.loads(messages.read_text(encoding="utf-8"))
+        record["source_created_at"] = True
+        messages.write_text(json.dumps(record) + "\n", encoding="utf-8")
+        update_manifest_file_hash(package, "messages.ndjson")
+        with self.assertRaisesRegex(ValidationError, "source_created_at must be an integer"):
+            validate(package)
+
+    def test_rejects_boolean_media_size(self) -> None:
+        package = self.copy_fixture()
+        attachments = package / "attachments.ndjson"
+        record = json.loads(attachments.read_text(encoding="utf-8"))
+        record["size"] = True
+        attachments.write_text(json.dumps(record) + "\n", encoding="utf-8")
+        update_manifest_file_hash(package, "attachments.ndjson")
+        with self.assertRaisesRegex(ValidationError, "size must be a non-negative integer"):
+            validate(package)
+
 
 if __name__ == "__main__":
     unittest.main()

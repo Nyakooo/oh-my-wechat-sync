@@ -15,6 +15,7 @@
 | 外部样本交接清单 | [`p0-external-sample-intake.md`](./p0-external-sample-intake.md) | 等待隔离 Windows 环境或合法脱敏样本 |
 | 路线决策模板 | [`p0-route-decision-template.md`](./p0-route-decision-template.md) | 待 P0-06～P0-11 证据填充 |
 | 合成导入包 | [`../tests/fixtures/import-v0-minimal`](../tests/fixtures/import-v0-minimal) | 只验证校验器，不代表真实来源链路 |
+| 导入包安全校验 | [`../tools/validate_import_package.py`](../tools/validate_import_package.py) | 包含严格整数、哈希、引用、路径和符号链接边界检查 |
 
 ## 当前未满足
 

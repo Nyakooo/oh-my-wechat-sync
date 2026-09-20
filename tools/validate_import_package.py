@@ -63,6 +63,12 @@ def required_string(record: dict[str, Any], key: str, context: str) -> str:
     return value
 
 
+def nonnegative_integer(value: Any, context: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValidationError(f"{context} must be a non-negative integer")
+    return value
+
+
 def unique_ids(records: list[dict[str, Any]], key: str, context: str) -> set[str]:
     values: set[str] = set()
     for index, record in enumerate(records, 1):
@@ -107,7 +113,7 @@ def sha256_and_size(path: Path) -> tuple[str, int]:
 def validate_manifest(package_root: Path, manifest: dict[str, Any]) -> None:
     if manifest.get("format") != "wechat-archive-import":
         raise ValidationError("manifest.format must be wechat-archive-import")
-    if manifest.get("format_version") != 0:
+    if isinstance(manifest.get("format_version"), bool) or manifest.get("format_version") != 0:
         raise ValidationError("only manifest.format_version 0 is supported")
     required_string(manifest, "export_id", "manifest")
     source = manifest.get("source")
@@ -140,8 +146,7 @@ def validate_manifest(package_root: Path, manifest: dict[str, Any]) -> None:
         entry = files.get(file_name)
         if not isinstance(entry, dict):
             raise ValidationError(f"manifest.files.{file_name} is required")
-        if not isinstance(entry.get("records"), int) or entry["records"] < 0:
-            raise ValidationError(f"manifest.files.{file_name}.records must be a non-negative integer")
+        nonnegative_integer(entry.get("records"), f"manifest.files.{file_name}.records")
         expected_hash = entry.get("sha256")
         if not isinstance(expected_hash, str) or len(expected_hash) != 64:
             raise ValidationError(f"manifest.files.{file_name}.sha256 must be a 64-character hex string")
@@ -198,7 +203,7 @@ def validate_records(package_root: Path, manifest: dict[str, Any]) -> dict[str, 
         source_chat_id = required_string(message, "source_chat_id", context)
         if source_chat_id not in conversation_ids:
             raise ValidationError(f"{context}: unknown source_chat_id")
-        if not isinstance(message.get("source_created_at"), int):
+        if isinstance(message.get("source_created_at"), bool) or not isinstance(message.get("source_created_at"), int):
             raise ValidationError(f"{context}: source_created_at must be an integer")
         required_string(message, "type", context)
         sender = message.get("sender_source_contact_id")
@@ -226,6 +231,8 @@ def validate_records(package_root: Path, manifest: dict[str, Any]) -> dict[str, 
         if actual_hash != expected_hash.lower():
             raise ValidationError(f"{context}: media hash mismatch")
         declared_size = attachment.get("size")
+        if declared_size is not None:
+            nonnegative_integer(declared_size, f"{context}: size")
         if declared_size is not None and declared_size != actual_size:
             raise ValidationError(f"{context}: media size mismatch")
 
