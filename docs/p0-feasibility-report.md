@@ -112,6 +112,14 @@ KasmVNC Web：HTTP 200
 
 本轮只验证到“运行环境和登录入口”，没有扫码，因此不代表登录态持久化、源数据目录、数据库读取或媒体读取已经成立。
 
+在使用固定 Compose 配置重复安装时，脚本在已经写入 `done` 状态、版本文件和可执行文件后，进程末尾仍报告：
+
+```text
+/woc/wechat-ctl.sh: line 1: lock: unbound variable
+```
+
+这表示候选 Runtime 的安装脚本存在“实际安装成功但命令返回非零”的退出码问题。验证和生产编排不能只依据 `docker compose exec` 的退出码判断安装结果，必须同时检查 `wechat-ctl.sh status`、版本文件和微信进程。该问题属于候选 Runtime 风险，不应由 Archive 业务层掩盖。
+
 ### 3.4 初步存储观察
 
 通过 `docker image inspect` 记录到：

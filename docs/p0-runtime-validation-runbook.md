@@ -54,6 +54,8 @@ docker compose -f docs/p0-runtime-compose.yaml exec wechat-runtime /woc/wechat-c
 
 安装完成后刷新 Web 页面，确认出现二维码。扫码动作由账号所有者在手机微信上完成；本项目不代替用户输入验证码或确认登录。
 
+注意：当前候选 Runtime 的安装脚本可能在已经成功写入微信文件和 `done` 状态后，仍因 `lock: unbound variable` 返回非零。必须以 `status`、`/config/wechat/.woc-version` 和微信进程共同判断结果，不要只依据安装命令退出码。
+
 ## 3. 验证登录态持久化
 
 扫码成功后，只记录状态和版本，不记录二维码或聊天内容：
