@@ -1,0 +1,14 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# P0 evidence and real test-account records; never commit source data
+docs/p0-test-account-record.md
+runtime-logs/
+screenshots/
+source-snapshots/
+fixtures-redacted/
+media-redacted/
+measurements/
+data/
