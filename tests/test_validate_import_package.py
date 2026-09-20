@@ -66,6 +66,32 @@ class ImportPackageValidatorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "media hash mismatch"):
             validate(package)
 
+    def test_rejects_media_size_mismatch(self) -> None:
+        package = self.copy_fixture()
+        attachments = package / "attachments.ndjson"
+        attachments.write_text(attachments.read_text(encoding="utf-8").replace('"size":16', '"size":15'), encoding="utf-8")
+        update_manifest_file_hash(package, "attachments.ndjson")
+        with self.assertRaisesRegex(ValidationError, "media size mismatch"):
+            validate(package)
+
+    def test_rejects_unsupported_source_kind(self) -> None:
+        package = self.copy_fixture()
+        manifest_path = package / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["source"]["kind"] = "unknown-source"
+        manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValidationError, "source.kind is unsupported"):
+            validate(package)
+
+    def test_rejects_timestamp_without_timezone(self) -> None:
+        package = self.copy_fixture()
+        manifest_path = package / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["created_at"] = "2026-09-20T00:00:00"
+        manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValidationError, "must include a timezone"):
+            validate(package)
+
 
 if __name__ == "__main__":
     unittest.main()

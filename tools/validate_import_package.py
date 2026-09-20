@@ -8,6 +8,7 @@ import hashlib
 import json
 import posixpath
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ REQUIRED_FILES = (
     "messages.ndjson",
     "attachments.ndjson",
 )
+SOURCE_KINDS = {"windows-agent", "offline-tool", "data-directory"}
 
 
 class ValidationError(Exception):
@@ -110,11 +112,20 @@ def validate_manifest(package_root: Path, manifest: dict[str, Any]) -> None:
     source = manifest.get("source")
     if not isinstance(source, dict):
         raise ValidationError("manifest.source must be an object")
-    required_string(source, "kind", "manifest.source")
+    source_kind = required_string(source, "kind", "manifest.source")
+    if source_kind not in SOURCE_KINDS:
+        raise ValidationError(f"manifest.source.kind is unsupported: {source_kind}")
     account = manifest.get("account")
     if not isinstance(account, dict):
         raise ValidationError("manifest.account must be an object")
     required_string(account, "source_account_id", "manifest.account")
+    created_at = required_string(manifest, "created_at", "manifest")
+    try:
+        parsed_created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValidationError("manifest.created_at must be RFC3339") from exc
+    if parsed_created_at.tzinfo is None:
+        raise ValidationError("manifest.created_at must include a timezone")
     files = manifest.get("files")
     if not isinstance(files, dict):
         raise ValidationError("manifest.files must be an object")
