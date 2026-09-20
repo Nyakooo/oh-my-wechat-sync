@@ -35,6 +35,7 @@ class ImportPackageValidatorTests(unittest.TestCase):
         counts = validate(FIXTURE)
         self.assertEqual(counts["messages.ndjson"], 1)
         self.assertEqual(counts["attachments.ndjson"], 1)
+        self.assertEqual(counts["conversation-members.ndjson"], 1)
 
     def test_rejects_manifest_hash_mismatch(self) -> None:
         package = self.copy_fixture()
@@ -49,6 +50,14 @@ class ImportPackageValidatorTests(unittest.TestCase):
         messages.write_text(messages.read_text(encoding="utf-8").replace('"chat-1"', '"missing-chat"'), encoding="utf-8")
         update_manifest_file_hash(package, "messages.ndjson")
         with self.assertRaisesRegex(ValidationError, "unknown source_chat_id"):
+            validate(package)
+
+    def test_rejects_unknown_member_reference(self) -> None:
+        package = self.copy_fixture()
+        members = package / "conversation-members.ndjson"
+        members.write_text(members.read_text(encoding="utf-8").replace('"contact-1"', '"missing-contact"'), encoding="utf-8")
+        update_manifest_file_hash(package, "conversation-members.ndjson")
+        with self.assertRaisesRegex(ValidationError, "unknown source_contact_id"):
             validate(package)
 
     def test_rejects_media_path_traversal(self) -> None:

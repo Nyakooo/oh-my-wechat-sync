@@ -33,7 +33,7 @@ wechat-archive-import-v0/
     └── <sha256>
 ```
 
-所有文本文件使用 UTF-8 和 LF；每行一个 JSON 对象。顺序不能作为唯一依据，导入必须按来源 ID 和内容哈希幂等处理。
+所有文本文件使用 UTF-8 和 LF；每行一个 JSON 对象。`conversation-members.ndjson` 可以省略，但只要存在就必须在 manifest 中声明。顺序不能作为唯一依据，导入必须按来源 ID 和内容哈希幂等处理。
 
 ## 3. Manifest 最小字段
 

@@ -28,6 +28,10 @@
     "attachments.ndjson": {
       "records": 1,
       "sha256": "190c7b3efb789dfc18df56c11139a0797ffda156843d07dba59d5489014758da"
+    },
+    "conversation-members.ndjson": {
+      "records": 1,
+      "sha256": "7f02bc4e98c665d51bf917aec9cd30cd41709e16210979f4d5477df57f4bdb8f"
     }
   },
   "created_at": "2026-09-20T00:00:00Z"

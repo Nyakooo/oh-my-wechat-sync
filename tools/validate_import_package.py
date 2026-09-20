@@ -19,6 +19,7 @@ REQUIRED_FILES = (
     "messages.ndjson",
     "attachments.ndjson",
 )
+OPTIONAL_FILES = ("conversation-members.ndjson",)
 SOURCE_KINDS = {"windows-agent", "offline-tool", "data-directory"}
 
 
@@ -130,7 +131,12 @@ def validate_manifest(package_root: Path, manifest: dict[str, Any]) -> None:
     if not isinstance(files, dict):
         raise ValidationError("manifest.files must be an object")
 
-    for file_name in REQUIRED_FILES:
+    for file_name in OPTIONAL_FILES:
+        if (package_root / file_name).exists() and file_name not in files:
+            raise ValidationError(f"optional file must be declared in manifest.files: {file_name}")
+
+    file_names = list(REQUIRED_FILES) + [file_name for file_name in OPTIONAL_FILES if file_name in files]
+    for file_name in file_names:
         entry = files.get(file_name)
         if not isinstance(entry, dict):
             raise ValidationError(f"manifest.files.{file_name} is required")
@@ -151,7 +157,8 @@ def validate_manifest(package_root: Path, manifest: dict[str, Any]) -> None:
 
 def validate_records(package_root: Path, manifest: dict[str, Any]) -> dict[str, int]:
     records_by_file: dict[str, list[dict[str, Any]]] = {}
-    for file_name in REQUIRED_FILES:
+    file_names = list(REQUIRED_FILES) + [file_name for file_name in OPTIONAL_FILES if file_name in manifest["files"]]
+    for file_name in file_names:
         path = package_root / file_name
         records = load_ndjson(path)
         records_by_file[file_name] = records
@@ -162,6 +169,21 @@ def validate_records(package_root: Path, manifest: dict[str, Any]) -> dict[str, 
     contact_ids = unique_ids(records_by_file["contacts.ndjson"], "source_contact_id", "contacts.ndjson")
     conversation_ids = unique_ids(records_by_file["conversations.ndjson"], "source_chat_id", "conversations.ndjson")
     message_ids = unique_ids(records_by_file["messages.ndjson"], "source_msg_id", "messages.ndjson")
+
+    if "conversation-members.ndjson" in records_by_file:
+        member_pairs: set[tuple[str, str]] = set()
+        for index, member in enumerate(records_by_file["conversation-members.ndjson"], 1):
+            context = f"conversation-members.ndjson record {index}"
+            source_chat_id = required_string(member, "source_chat_id", context)
+            source_contact_id = required_string(member, "source_contact_id", context)
+            if source_chat_id not in conversation_ids:
+                raise ValidationError(f"{context}: unknown source_chat_id")
+            if source_contact_id not in contact_ids:
+                raise ValidationError(f"{context}: unknown source_contact_id")
+            pair = (source_chat_id, source_contact_id)
+            if pair in member_pairs:
+                raise ValidationError(f"duplicate member pair in conversation-members.ndjson: {pair[0]}/{pair[1]}")
+            member_pairs.add(pair)
 
     for index, conversation in enumerate(records_by_file["conversations.ndjson"], 1):
         kind = required_string(conversation, "kind", f"conversations.ndjson record {index}")
