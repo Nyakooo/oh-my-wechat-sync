@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 import shutil
+import time
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -86,9 +87,28 @@ class ApiLogicTests(unittest.TestCase):
         with self.factory() as connection:
             run_sync = self.handlers[("/api/v1/accounts/{account_id}/sync/import", "POST")]
             result = run_sync("account-a", ImportSyncRequest(package_name="minimal"), connection)
-            self.assertEqual(result["status"], "completed")
-            jobs = self.handlers[("/api/v1/accounts/{account_id}/sync/jobs", "GET")]("account-a", 20, connection)
+            self.assertEqual(result["status"], "queued")
+            jobs = []
+            for _ in range(40):
+                jobs = self.handlers[("/api/v1/accounts/{account_id}/sync/jobs", "GET")]("account-a", 20, connection)
+                if jobs and jobs[0]["status"] == "completed":
+                    break
+                time.sleep(0.05)
             self.assertEqual(jobs[0]["status"], "completed")
+            events = self.handlers[("/api/v1/sync/jobs/{job_id}/events", "GET")](result["job_id"], connection)
+            self.assertEqual([event["event_type"] for event in events], ["queued", "running", "completed"])
+
+    def test_cancel_completed_sync_is_safe(self) -> None:
+        with self.factory() as connection:
+            run_sync = self.handlers[("/api/v1/accounts/{account_id}/sync/import", "POST")]
+            result = run_sync("account-a", ImportSyncRequest(package_name="minimal"), connection)
+            for _ in range(40):
+                job = self.handlers[("/api/v1/sync/jobs/{job_id}", "GET")](result["job_id"], connection)
+                if job["status"] == "completed":
+                    break
+                time.sleep(0.05)
+            cancel = self.handlers[("/api/v1/sync/jobs/{job_id}/cancel", "POST")](result["job_id"], connection)
+            self.assertEqual(cancel["status"], "completed")
 
 
 if __name__ == "__main__":

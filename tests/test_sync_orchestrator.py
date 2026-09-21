@@ -1,9 +1,10 @@
 import shutil
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
-from archive_core import SyncBusyError, SyncOrchestrator, connect, initialize
+from archive_core import SyncBusyError, SyncCancelledError, SyncOrchestrator, connect, initialize
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,6 +58,22 @@ class SyncOrchestratorTests(unittest.TestCase):
             self.orchestrator.sync_package(FIXTURE, self.temp_dir / "data", "account-b")
 
         self.assertEqual(self.connection.execute("SELECT COUNT(*) FROM sync_jobs").fetchone()[0], 0)
+
+    def test_cancelled_package_sync_records_cancelled_job_and_event(self) -> None:
+        cancel_event = threading.Event()
+        cancel_event.set()
+        with self.assertRaises(SyncCancelledError):
+            self.orchestrator.sync_package(
+                FIXTURE,
+                self.temp_dir / "data",
+                "account-a",
+                cancel_event=cancel_event,
+            )
+        job = self.connection.execute("SELECT status, error_code FROM sync_jobs ORDER BY started_at DESC LIMIT 1").fetchone()
+        self.assertEqual(tuple(job), ("cancelled", "SYNC_CANCELLED"))
+        event = self.connection.execute("SELECT event_type FROM sync_events ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertEqual(event[0], "cancelled")
+        self.assertEqual(self.connection.execute("SELECT COUNT(*) FROM messages").fetchone()[0], 0)
 
 
 if __name__ == "__main__":

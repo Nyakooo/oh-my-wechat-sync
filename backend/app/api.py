@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import threading
 import time
+import uuid
 from contextlib import contextmanager
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Iterator
 
@@ -20,7 +23,7 @@ from archive_core.queries import (
     list_conversations,
     list_messages,
 )
-from archive_core.sync import SyncBusyError, SyncOrchestrator
+from archive_core.sync import SyncBusyError, SyncCancelledError, SyncOrchestrator
 
 
 class AccountCreate(BaseModel):
@@ -69,6 +72,9 @@ def build_router(
     import_root: Path | None = None,
 ):
     router = APIRouter(prefix="/api/v1")
+    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="archive-sync")
+    cancel_events: dict[str, threading.Event] = {}
+    task_lock = threading.Lock()
 
     def db() -> Iterator[sqlite3.Connection]:
         with connection_factory() as connection:
@@ -262,6 +268,13 @@ def build_router(
             raise HTTPException(status_code=404, detail="sync job not found")
         return _row(job)
 
+    @router.get("/sync/jobs/{job_id}/events")
+    def get_sync_events(job_id: str, connection: sqlite3.Connection = Depends(db)) -> list[dict[str, object]]:
+        job = connection.execute("SELECT id FROM sync_jobs WHERE id = ?", (job_id,)).fetchone()
+        if job is None:
+            raise HTTPException(status_code=404, detail="sync job not found")
+        return [_row(item) for item in SyncOrchestrator(connection).get_events(job_id)]
+
     @router.get("/accounts/{account_id}/sync/jobs")
     def get_account_sync_jobs(
         account_id: str,
@@ -285,18 +298,86 @@ def build_router(
     ) -> dict[str, object]:
         account = _account_or_404(connection, account_id)
         package = _package_path(import_root, payload.package_name)
-        try:
-            result = SyncOrchestrator(connection).sync_package(
-                package,
-                archive_root or Path("data"),
-                account_id,
-                display_name=account["display_name"],
-            )
-        except SyncBusyError as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from exc
-        except Exception as exc:
-            raise HTTPException(status_code=422, detail=f"import sync failed: {exc}") from exc
-        return result
+        job_id = f"job_{uuid.uuid4().hex}"
+        connection.execute(
+            "INSERT INTO sync_jobs(id, account_id, trigger, status, phase) VALUES (?, ?, 'manual', 'queued', 'queued')",
+            (job_id, account_id),
+        )
+        connection.execute(
+            "INSERT INTO sync_events(job_id, event_type, detail, created_at) VALUES (?, 'queued', 'waiting for sync worker', ?)",
+            (job_id, int(time.time() * 1000)),
+        )
+        connection.commit()
+        cancel_event = threading.Event()
+        with task_lock:
+            cancel_events[job_id] = cancel_event
+
+        def run() -> None:
+            try:
+                with connection_factory() as worker_connection:
+                    SyncOrchestrator(worker_connection).sync_package(
+                        package,
+                        archive_root or Path("data"),
+                        account_id,
+                        display_name=account["display_name"],
+                        job_id=job_id,
+                        cancel_event=cancel_event,
+                    )
+            except SyncBusyError as exc:
+                with connection_factory() as worker_connection:
+                    now = int(time.time() * 1000)
+                    worker_connection.execute(
+                        "UPDATE sync_jobs SET status = 'failed', phase = 'lock', finished_at = ?, error_code = 'SYNC_BUSY', error_message = ? WHERE id = ?",
+                        (now, str(exc), job_id),
+                    )
+                    worker_connection.execute(
+                        "INSERT INTO sync_events(job_id, event_type, detail, created_at) VALUES (?, 'failed', ?, ?)",
+                        (job_id, str(exc), now),
+                    )
+                    worker_connection.commit()
+            except SyncCancelledError:
+                pass
+            except Exception as exc:
+                with connection_factory() as worker_connection:
+                    now = int(time.time() * 1000)
+                    worker_connection.execute(
+                        "UPDATE sync_jobs SET status = 'failed', phase = 'worker', finished_at = ?, error_code = 'WORKER_FAILED', error_message = ? WHERE id = ?",
+                        (now, str(exc), job_id),
+                    )
+                    worker_connection.execute(
+                        "INSERT INTO sync_events(job_id, event_type, detail, created_at) VALUES (?, 'failed', ?, ?)",
+                        (job_id, str(exc), now),
+                    )
+                    worker_connection.commit()
+            finally:
+                with task_lock:
+                    cancel_events.pop(job_id, None)
+
+        executor.submit(run)
+        return {"job_id": job_id, "status": "queued"}
+
+    @router.post("/sync/jobs/{job_id}/cancel")
+    def cancel_sync_job(job_id: str, connection: sqlite3.Connection = Depends(db)) -> dict[str, object]:
+        job = connection.execute("SELECT status FROM sync_jobs WHERE id = ?", (job_id,)).fetchone()
+        if job is None:
+            raise HTTPException(status_code=404, detail="sync job not found")
+        if job["status"] in {"completed", "failed", "cancelled"}:
+            return {"job_id": job_id, "status": job["status"]}
+        with task_lock:
+            event = cancel_events.get(job_id)
+        if event is not None:
+            event.set()
+        now = int(time.time() * 1000)
+        connection.execute(
+            "UPDATE sync_jobs SET status = 'cancel_requested', phase = 'cancel_requested' WHERE id = ? AND status = 'queued'",
+            (job_id,),
+        )
+        connection.execute(
+            "INSERT INTO sync_events(job_id, event_type, detail, created_at) VALUES (?, 'cancel_requested', 'user requested cancellation', ?)",
+            (job_id, now),
+        )
+        connection.commit()
+        return {"job_id": job_id, "status": "cancel_requested"}
 
     return router
 

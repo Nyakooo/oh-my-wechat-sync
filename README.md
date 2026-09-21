@@ -30,7 +30,8 @@
 - `GET /api/v1/accounts/{account_id}/attachments/{attachment_id}/content`：受账号范围约束的媒体读取；
 - `GET /api/v1/search?account_id=...&q=...`：账号范围内的 FTS5 搜索；
 - `POST /api/v1/accounts/{account_id}/sync/import`：手动执行预配置导入根目录下的指定包；
-- `GET /api/v1/sync/jobs/{job_id}`、`GET /api/v1/accounts/{account_id}/sync/jobs`：读取导入同步任务结果。
+- `GET /api/v1/sync/jobs/{job_id}`、`GET /api/v1/accounts/{account_id}/sync/jobs`：读取导入同步任务结果；
+- `GET /api/v1/sync/jobs/{job_id}/events`、`POST /api/v1/sync/jobs/{job_id}/cancel`：读取事件和请求取消 Import-first 任务。
 
 API 默认使用 `data/archive.db`、`data` 媒体目录和 `imports` 导入根目录，可通过 `WECHAT_ARCHIVE_DB`、`WECHAT_ARCHIVE_ROOT`、`WECHAT_IMPORT_ROOT` 调整。同步 API 只接受导入根目录下的相对包名，会拒绝绝对路径、路径穿越和符号链接逃逸。
 

@@ -5,7 +5,7 @@ from .importer import import_package, search_messages
 from .migrations import CURRENT_SCHEMA_VERSION, migrate
 from .protocol import ImportAdapter, SourceInfo
 from .runtime import RuntimeAdapter, RuntimeManager, RuntimeStatus, RuntimeUnavailableError
-from .sync import SyncBusyError, SyncOrchestrator
+from .sync import SyncBusyError, SyncCancelledError, SyncOrchestrator
 
 __all__ = [
     "CURRENT_SCHEMA_VERSION",
@@ -16,6 +16,7 @@ __all__ = [
     "RuntimeStatus",
     "RuntimeUnavailableError",
     "SyncBusyError",
+    "SyncCancelledError",
     "SyncOrchestrator",
     "connect",
     "initialize",

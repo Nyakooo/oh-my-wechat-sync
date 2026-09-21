@@ -88,6 +88,14 @@ CREATE TABLE IF NOT EXISTS sync_jobs (
     stats_json TEXT
 );
 
+CREATE TABLE IF NOT EXISTS sync_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id TEXT NOT NULL REFERENCES sync_jobs(id),
+    event_type TEXT NOT NULL,
+    detail TEXT,
+    created_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS sync_checkpoints (
     account_id TEXT NOT NULL REFERENCES accounts(id),
     source_name TEXT NOT NULL,
@@ -109,6 +117,7 @@ CREATE INDEX IF NOT EXISTS idx_contacts_account ON contacts(account_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_account ON conversations(account_id);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_time ON messages(conversation_id, source_created_at);
 CREATE INDEX IF NOT EXISTS idx_attachments_message ON attachments(message_id);
+CREATE INDEX IF NOT EXISTS idx_sync_events_job ON sync_events(job_id, id);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
     message_id UNINDEXED,
