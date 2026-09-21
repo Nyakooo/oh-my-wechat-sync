@@ -23,6 +23,9 @@
 - accounts、contacts、conversations、conversation_members、messages、attachments、sync_jobs、sync_checkpoints 表；
 - 标准化 `Source*` DTO；
 - `ImportAdapter` 协议边界和离线导入 CLI；
+- Import-first 同步编排：进程内锁、sync job、checkpoint、失败状态和统计；
+
+同步编排入口为 [`archive_core/sync.py`](../archive_core/sync.py)，当前只接受离线导入包，不启动或停止微信 Runtime。
 - 导入事务和失败回滚；
 - `(account_id, source_msg_id)` 消息幂等；
 - 按 SHA-256 的媒体文件去重；
