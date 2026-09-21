@@ -55,6 +55,7 @@ API 默认使用 `data/archive.db`、`data` 媒体目录和 `imports` 导入根�
 - [P0 一次性 Compose 配置](./docs/p0-runtime-compose.yaml)：仅用于 Phase 0 验证，不是生产部署配置；
 - [P0 Runtime 路线评估](./docs/p0-route-assessment.md)：Linux Runtime、Windows Agent 和离线导入的阶段性判断；
 - [Import-first 实现路线](./docs/import-first-architecture.md)：当前 Ubuntu-only 条件下的归档核心边界和验证方式；
+- [Docker 部署配置](./deploy/compose.yaml)：单容器 API + 静态 Web、`/data` 归档卷和只读 `imports` 卷；
 - [技术架构与可执行开发计划](./微信个人增量备份系统——技术架构与可执行开发计划.md)：完整架构、数据模型、同步流程、API、部署和风险说明。
 
 ## 开发顺序
@@ -94,6 +95,15 @@ python -m uvicorn backend.app.main:app --reload
 ```
 
 导入包仍建议先通过 CLI 或 `SyncOrchestrator` 执行，再从 API 浏览归档数据。API 当前不接受任意客户端文件路径，也不伪造 Runtime 启停和扫码状态。
+
+Docker 启动：
+
+```bash
+mkdir -p data imports
+docker compose -f deploy/compose.yaml up -d --build
+```
+
+默认访问 `http://localhost:8000`。归档数据库和媒体写入 `data/`，导入包从只读的 `imports/` 挂载读取。
 
 开始 P0 前准备：
 

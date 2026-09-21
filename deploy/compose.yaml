@@ -1,0 +1,15 @@
+services:
+  archive:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "${WECHAT_ARCHIVE_PORT:-8000}:8000"
+    environment:
+      WECHAT_ARCHIVE_DB: /data/archive.db
+      WECHAT_ARCHIVE_ROOT: /data
+      WECHAT_IMPORT_ROOT: /imports
+    volumes:
+      - ${WECHAT_ARCHIVE_DATA_DIR:-../data}:/data
+      - ${WECHAT_IMPORT_DATA_DIR:-../imports}:/imports:ro
+    restart: unless-stopped

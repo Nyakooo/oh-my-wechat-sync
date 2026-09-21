@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from archive_core.database import connect, initialize
 
@@ -33,6 +34,9 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         }
 
     app.include_router(build_router(factory, archive_root, import_root))
+    web_dist = Path(__file__).resolve().parents[2] / "web" / "dist"
+    if web_dist.is_dir():
+        app.mount("/", StaticFiles(directory=web_dist, html=True), name="web")
     return app
 
 
