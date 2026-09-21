@@ -212,10 +212,26 @@ def build_router(connection_factory, archive_root: Path | None = None):
         account_id: str,
         q: str = Query(min_length=1, max_length=200),
         limit: int = Query(default=50, ge=1, le=200),
+        conversation_id: str | None = Query(default=None),
+        start_at: int | None = Query(default=None, ge=0),
+        end_at: int | None = Query(default=None, ge=0),
+        message_type: str | None = Query(default=None, min_length=1, max_length=50),
         connection: sqlite3.Connection = Depends(db),
     ) -> list[dict[str, object]]:
         _account_or_404(connection, account_id)
-        return [_row(item) for item in search_messages(connection, account_id, q, limit)]
+        return [
+            _row(item)
+            for item in search_messages(
+                connection,
+                account_id,
+                q,
+                limit,
+                conversation_id=conversation_id,
+                start_at=start_at,
+                end_at=end_at,
+                message_type=message_type,
+            )
+        ]
 
     @router.get("/sync/jobs/{job_id}")
     def get_sync_job(job_id: str, connection: sqlite3.Connection = Depends(db)) -> dict[str, object]:

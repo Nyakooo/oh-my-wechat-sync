@@ -49,7 +49,16 @@ class ApiLogicTests(unittest.TestCase):
             self.assertEqual(created["status"], "pending")
             updated = self.handlers[("/api/v1/accounts/{account_id}", "PATCH")]("account-b", AccountUpdate(display_name="新名称"), connection)
             self.assertEqual(updated["display_name"], "新名称")
-            result = self.handlers[("/api/v1/search", "GET")]("account-a", "Synthetic", 50, connection)
+            result = self.handlers[("/api/v1/search", "GET")](
+                "account-a",
+                "Synthetic",
+                50,
+                None,
+                None,
+                None,
+                None,
+                connection,
+            )
             self.assertEqual(result[0]["source_msg_id"], "msg-1")
 
     def test_delete_requires_confirmation_and_removes_account_rows(self) -> None:

@@ -27,7 +27,11 @@ class ArchiveCoreTests(unittest.TestCase):
         self.assertEqual(stats["attachments_inserted"], 1)
         self.assertEqual(self.connection.execute("SELECT COUNT(*) FROM messages").fetchone()[0], 1)
         self.assertEqual(self.connection.execute("SELECT COUNT(*) FROM attachments").fetchone()[0], 1)
-        self.assertEqual(len(search_messages(self.connection, "account-a", "Synthetic")), 1)
+        results = search_messages(self.connection, "account-a", "Synthetic")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(search_messages(self.connection, "account-a", "Synthetic", message_type="image"), [])
+        self.assertEqual(search_messages(self.connection, "account-a", "Synthetic", start_at=1726652160000), results)
+        self.assertEqual(search_messages(self.connection, "account-a", "Synthetic", end_at=1726652159999), [])
         self.assertEqual(len(list((self.temp_dir / "data" / "media").iterdir())), 1)
 
     def test_repeat_import_is_idempotent(self) -> None:

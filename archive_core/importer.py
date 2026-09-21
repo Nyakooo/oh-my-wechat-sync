@@ -211,16 +211,40 @@ def import_package(
     return dict(stats)
 
 
-def search_messages(connection: sqlite3.Connection, account_id: str, query: str, limit: int = 50) -> list[sqlite3.Row]:
+def search_messages(
+    connection: sqlite3.Connection,
+    account_id: str,
+    query: str,
+    limit: int = 50,
+    conversation_id: str | None = None,
+    start_at: int | None = None,
+    end_at: int | None = None,
+    message_type: str | None = None,
+) -> list[sqlite3.Row]:
     if not query.strip():
         return []
+    filters = ["messages_fts MATCH ?", "messages.account_id = ?"]
+    parameters: list[object] = [query, account_id]
+    if conversation_id is not None:
+        filters.append("messages.conversation_id = ?")
+        parameters.append(conversation_id)
+    if start_at is not None:
+        filters.append("messages.source_created_at >= ?")
+        parameters.append(start_at)
+    if end_at is not None:
+        filters.append("messages.source_created_at <= ?")
+        parameters.append(end_at)
+    if message_type is not None:
+        filters.append("messages.type = ?")
+        parameters.append(message_type)
+    parameters.append(limit)
     return connection.execute(
-        """SELECT messages.id, messages.source_msg_id, messages.content, messages.source_created_at,
-                  messages.conversation_id
+        f"""SELECT messages.id, messages.source_msg_id, messages.content, messages.source_created_at,
+                  messages.conversation_id, messages.type
            FROM messages_fts
            JOIN messages ON messages.id = messages_fts.message_id
-           WHERE messages_fts MATCH ? AND messages.account_id = ?
+           WHERE {' AND '.join(filters)}
            ORDER BY messages.source_created_at
            LIMIT ?""",
-        (query, account_id, limit),
+        parameters,
     ).fetchall()
