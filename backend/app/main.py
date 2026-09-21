@@ -4,11 +4,12 @@ from fastapi import FastAPI
 
 from archive_core.database import connect, initialize
 
-from .api import build_router, connection_factory_for, default_paths
+from .api import build_router, connection_factory_for, default_import_root, default_paths
 
 
 def create_app(database_path: str | Path | None = None) -> FastAPI:
     configured_db, archive_root = default_paths()
+    import_root = default_import_root()
     db_path = Path(database_path) if database_path is not None else configured_db
     factory = connection_factory_for(db_path)
 
@@ -31,7 +32,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             "counts": {"accounts": account_count, "messages": message_count},
         }
 
-    app.include_router(build_router(factory, archive_root))
+    app.include_router(build_router(factory, archive_root, import_root))
     return app
 
 

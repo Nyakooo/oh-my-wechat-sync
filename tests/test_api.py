@@ -1,12 +1,13 @@
 import tempfile
 import unittest
+import shutil
 from pathlib import Path
 
 from fastapi import HTTPException
 
 from archive_core.database import connect, initialize
 from archive_core.importer import import_package
-from backend.app.api import AccountCreate, AccountUpdate, build_router, connection_factory_for
+from backend.app.api import AccountCreate, AccountUpdate, ImportSyncRequest, build_router, connection_factory_for
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,7 +22,12 @@ class ApiLogicTests(unittest.TestCase):
         with self.factory() as connection:
             initialize(connection)
             import_package(connection, FIXTURE, Path(self.temp_dir.name) / "archive", "account-a", now_ms=1700000000000)
-        self.router = build_router(self.factory, Path(self.temp_dir.name) / "archive")
+        self.router = build_router(
+            self.factory,
+            Path(self.temp_dir.name) / "archive",
+            Path(self.temp_dir.name) / "imports",
+        )
+        shutil.copytree(FIXTURE, Path(self.temp_dir.name) / "imports" / "minimal")
         self.handlers = {
             (route.path, method): route.endpoint
             for route in self.router.routes
@@ -75,6 +81,14 @@ class ApiLogicTests(unittest.TestCase):
             with self.assertRaises(HTTPException) as context:
                 self.handlers[("/api/v1/accounts/{account_id}", "GET")]("missing", connection)
             self.assertEqual(context.exception.status_code, 404)
+
+    def test_import_sync_endpoint_uses_named_package_under_configured_root(self) -> None:
+        with self.factory() as connection:
+            run_sync = self.handlers[("/api/v1/accounts/{account_id}/sync/import", "POST")]
+            result = run_sync("account-a", ImportSyncRequest(package_name="minimal"), connection)
+            self.assertEqual(result["status"], "completed")
+            jobs = self.handlers[("/api/v1/accounts/{account_id}/sync/jobs", "GET")]("account-a", 20, connection)
+            self.assertEqual(jobs[0]["status"], "completed")
 
 
 if __name__ == "__main__":

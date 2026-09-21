@@ -20,6 +20,7 @@ from archive_core.queries import (
     list_conversations,
     list_messages,
 )
+from archive_core.sync import SyncBusyError, SyncOrchestrator
 
 
 class AccountCreate(BaseModel):
@@ -34,6 +35,10 @@ class AccountUpdate(BaseModel):
     wechat_id: str | None = Field(default=None, max_length=200)
 
 
+class ImportSyncRequest(BaseModel):
+    package_name: str = Field(min_length=1, max_length=200)
+
+
 def _row(row: sqlite3.Row) -> dict[str, object]:
     return dict(row)
 
@@ -45,7 +50,24 @@ def _account_or_404(connection: sqlite3.Connection, account_id: str) -> sqlite3.
     return account
 
 
-def build_router(connection_factory, archive_root: Path | None = None):
+def _package_path(import_root: Path | None, package_name: str) -> Path:
+    if import_root is None:
+        raise HTTPException(status_code=503, detail="offline import root is not configured")
+    candidate = Path(package_name)
+    if candidate.is_absolute() or ".." in candidate.parts:
+        raise HTTPException(status_code=400, detail="package_name must be relative to the import root")
+    root = import_root.resolve()
+    package = (root / candidate).resolve()
+    if root not in package.parents or not package.is_dir() or not (package / "manifest.json").is_file():
+        raise HTTPException(status_code=404, detail="import package not found")
+    return package
+
+
+def build_router(
+    connection_factory,
+    archive_root: Path | None = None,
+    import_root: Path | None = None,
+):
     router = APIRouter(prefix="/api/v1")
 
     def db() -> Iterator[sqlite3.Connection]:
@@ -240,6 +262,42 @@ def build_router(connection_factory, archive_root: Path | None = None):
             raise HTTPException(status_code=404, detail="sync job not found")
         return _row(job)
 
+    @router.get("/accounts/{account_id}/sync/jobs")
+    def get_account_sync_jobs(
+        account_id: str,
+        limit: int = Query(default=20, ge=1, le=100),
+        connection: sqlite3.Connection = Depends(db),
+    ) -> list[dict[str, object]]:
+        _account_or_404(connection, account_id)
+        return [
+            _row(item)
+            for item in connection.execute(
+                "SELECT * FROM sync_jobs WHERE account_id = ? ORDER BY started_at DESC LIMIT ?",
+                (account_id, limit),
+            ).fetchall()
+        ]
+
+    @router.post("/accounts/{account_id}/sync/import")
+    def run_import_sync(
+        account_id: str,
+        payload: ImportSyncRequest,
+        connection: sqlite3.Connection = Depends(db),
+    ) -> dict[str, object]:
+        account = _account_or_404(connection, account_id)
+        package = _package_path(import_root, payload.package_name)
+        try:
+            result = SyncOrchestrator(connection).sync_package(
+                package,
+                archive_root or Path("data"),
+                account_id,
+                display_name=account["display_name"],
+            )
+        except SyncBusyError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"import sync failed: {exc}") from exc
+        return result
+
     return router
 
 
@@ -248,6 +306,10 @@ def default_paths() -> tuple[Path, Path]:
         Path(os.environ.get("WECHAT_ARCHIVE_DB", "data/archive.db")),
         Path(os.environ.get("WECHAT_ARCHIVE_ROOT", "data")),
     )
+
+
+def default_import_root() -> Path:
+    return Path(os.environ.get("WECHAT_IMPORT_ROOT", "imports"))
 
 
 def connection_factory_for(database_path: Path):
