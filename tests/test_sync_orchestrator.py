@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from archive_core import SyncOrchestrator, connect, initialize
+from archive_core import SyncBusyError, SyncOrchestrator, connect, initialize
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,6 +46,17 @@ class SyncOrchestratorTests(unittest.TestCase):
 
         self.assertEqual(self.connection.execute("SELECT COUNT(*) FROM messages").fetchone()[0], 1)
         self.assertEqual(self.connection.execute("SELECT COUNT(*) FROM sync_jobs").fetchone()[0], 2)
+
+    def test_database_global_lock_blocks_another_account(self) -> None:
+        self.connection.execute(
+            "INSERT INTO sync_locks(lock_name, job_id, acquired_at) VALUES ('global', 'existing-job', 1)"
+        )
+        self.connection.commit()
+
+        with self.assertRaises(SyncBusyError):
+            self.orchestrator.sync_package(FIXTURE, self.temp_dir / "data", "account-b")
+
+        self.assertEqual(self.connection.execute("SELECT COUNT(*) FROM sync_jobs").fetchone()[0], 0)
 
 
 if __name__ == "__main__":

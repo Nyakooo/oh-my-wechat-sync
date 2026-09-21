@@ -99,6 +99,12 @@ CREATE TABLE IF NOT EXISTS sync_checkpoints (
     PRIMARY KEY (account_id, source_name)
 );
 
+CREATE TABLE IF NOT EXISTS sync_locks (
+    lock_name TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    acquired_at INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_contacts_account ON contacts(account_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_account ON conversations(account_id);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_time ON messages(conversation_id, source_created_at);

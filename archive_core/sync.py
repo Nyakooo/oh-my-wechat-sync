@@ -36,6 +36,15 @@ class SyncOrchestrator:
         job_id = f"job_{uuid.uuid4().hex}"
         started_at = int(time.time() * 1000)
         try:
+            try:
+                self.connection.execute(
+                    "INSERT INTO sync_locks(lock_name, job_id, acquired_at) VALUES ('global', ?, ?)",
+                    (job_id, started_at),
+                )
+                self.connection.commit()
+            except sqlite3.IntegrityError as exc:
+                self.connection.rollback()
+                raise SyncBusyError("another sync is already recorded in the archive") from exc
             self.connection.execute(
                 """INSERT INTO accounts(id, display_name, runtime_kind, status, created_at, updated_at)
                    VALUES (?, ?, 'import', 'syncing', ?, ?)
@@ -74,6 +83,8 @@ class SyncOrchestrator:
                 self.connection.commit()
                 raise
         finally:
+            self.connection.execute("DELETE FROM sync_locks WHERE lock_name = 'global' AND job_id = ?", (job_id,))
+            self.connection.commit()
             self._lock.release()
 
     def get_job(self, job_id: str) -> sqlite3.Row | None:
