@@ -52,7 +52,12 @@ h2 { margin: 6px 0 0; font-size: 21px; letter-spacing: -.02em; }
 .message-item { border-bottom: 1px solid #edf1ef; padding: 15px 0; }
 .message-meta { display: flex; justify-content: space-between; gap: 16px; color: #4e655b; font-size: 13px; }
 .message-item p { margin: 8px 0 5px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
-.attachment-note { color: #5d9279; }
+.attachment-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.attachment-note { color: #5d9279; text-decoration: none; }
+.attachment-note:hover { text-decoration: underline; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 18px 0 2px; color: #899591; font-size: 12px; }
+.pager button { border: 1px solid #d7e0db; border-radius: 999px; padding: 6px 12px; color: #426f5c; background: #fff; }
+.pager button:disabled { cursor: default; opacity: .4; }
 .search-results { padding-top: 18px; }
 .result-item { display: flex; justify-content: space-between; gap: 20px; border-bottom: 1px solid #edf1ef; padding: 14px 0; color: inherit; background: transparent; }
 .result-item:hover { color: #315e4b; }

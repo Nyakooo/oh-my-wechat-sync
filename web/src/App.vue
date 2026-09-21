@@ -8,6 +8,9 @@ const selectedAccount = ref(null)
 const selectedConversation = ref(null)
 const searchQuery = ref('')
 const searchResults = ref([])
+const messageOffset = ref(0)
+const hasMoreMessages = ref(false)
+const messagePageSize = 100
 const loading = ref(false)
 const error = ref('')
 const health = ref(null)
@@ -60,14 +63,27 @@ const openAccount = async (account) => {
 
 const openConversation = async (conversation) => {
   selectedConversation.value = conversation
+  messageOffset.value = 0
+  await loadMessages()
+}
+
+const loadMessages = async () => {
   error.value = ''
   try {
     messages.value = await request(
-      `/api/v1/accounts/${encodeURIComponent(selectedAccount.value.id)}/conversations/${encodeURIComponent(conversation.id)}/messages?limit=200`,
+      `/api/v1/accounts/${encodeURIComponent(selectedAccount.value.id)}/conversations/${encodeURIComponent(selectedConversation.value.id)}/messages?limit=${messagePageSize}&offset=${messageOffset.value}`,
     )
+    hasMoreMessages.value = messages.value.length === messagePageSize
   } catch (cause) {
     error.value = cause.message
   }
+}
+
+const changeMessagePage = async (direction) => {
+  const nextOffset = messageOffset.value + direction * messagePageSize
+  if (nextOffset < 0 || (!hasMoreMessages.value && direction > 0)) return
+  messageOffset.value = nextOffset
+  await loadMessages()
 }
 
 const search = async () => {
@@ -81,6 +97,23 @@ const search = async () => {
     )
   } catch (cause) {
     error.value = cause.message
+  }
+}
+
+const openSearchResult = async (result) => {
+  let conversation = conversations.value.find((item) => item.id === result.conversation_id)
+  if (!conversation) {
+    try {
+      conversations.value = await request(`/api/v1/accounts/${encodeURIComponent(selectedAccount.value.id)}/conversations?limit=100`)
+      conversation = conversations.value.find((item) => item.id === result.conversation_id)
+    } catch (cause) {
+      error.value = cause.message
+      return
+    }
+  }
+  if (conversation) {
+    searchResults.value = []
+    await openConversation(conversation)
   }
 }
 
@@ -141,7 +174,7 @@ onMounted(loadAccounts)
 
           <div v-if="searchResults.length" class="search-results">
             <p class="section-kicker">SEARCH RESULTS · {{ searchResults.length }}</p>
-            <button v-for="result in searchResults" :key="result.id" type="button" class="result-item"><span>{{ result.content }}</span><small>{{ formatTime(result.source_created_at) }}</small></button>
+            <button v-for="result in searchResults" :key="result.id" type="button" class="result-item" @click="openSearchResult(result)"><span>{{ result.content }}</span><small>{{ formatTime(result.source_created_at) }}</small></button>
           </div>
 
           <div v-else class="reader-columns">
@@ -156,8 +189,15 @@ onMounted(loadAccounts)
               <article v-for="message in messages" :key="message.id" class="message-item">
                 <div class="message-meta"><strong>{{ message.is_self ? '我' : (message.sender_display_name || '未知联系人') }}</strong><time>{{ formatTime(message.source_created_at) }}</time></div>
                 <p>{{ message.content || `[${message.type}]` }}</p>
-                <small v-if="message.attachments.length" class="attachment-note">{{ message.attachments.length }} 个附件</small>
+                <div v-if="message.attachments.length" class="attachment-list">
+                  <a v-for="attachment in message.attachments" :key="attachment.id" class="attachment-note" :href="`/api/v1/accounts/${encodeURIComponent(selectedAccount.id)}/attachments/${encodeURIComponent(attachment.id)}/content`" target="_blank" rel="noopener">{{ attachment.original_name || attachment.kind }}</a>
+                </div>
               </article>
+              <div v-if="messages.length" class="pager">
+                <button type="button" :disabled="messageOffset === 0" @click="changeMessagePage(-1)">上一页</button>
+                <span>第 {{ Math.floor(messageOffset / messagePageSize) + 1 }} 页</span>
+                <button type="button" :disabled="!hasMoreMessages" @click="changeMessagePage(1)">下一页</button>
+              </div>
             </div>
           </div>
         </template>
