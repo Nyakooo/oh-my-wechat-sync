@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 
 const accounts = ref([])
 const conversations = ref([])
@@ -7,7 +7,14 @@ const messages = ref([])
 const selectedAccount = ref(null)
 const selectedConversation = ref(null)
 const searchQuery = ref('')
+const searchType = ref('')
+const searchFrom = ref('')
+const searchTo = ref('')
 const searchResults = ref([])
+const packageName = ref('')
+const syncJob = ref(null)
+const syncError = ref('')
+const syncTimer = ref(null)
 const messageOffset = ref(0)
 const hasMoreMessages = ref(false)
 const messagePageSize = 100
@@ -92,11 +99,55 @@ const search = async () => {
     return
   }
   try {
+    const params = new URLSearchParams({ account_id: selectedAccount.value.id, q: searchQuery.value.trim() })
+    if (searchType.value) params.set('message_type', searchType.value)
+    if (searchFrom.value) params.set('start_at', String(Date.parse(`${searchFrom.value}T00:00:00`)))
+    if (searchTo.value) params.set('end_at', String(Date.parse(`${searchTo.value}T23:59:59.999`)))
     searchResults.value = await request(
-      `/api/v1/search?account_id=${encodeURIComponent(selectedAccount.value.id)}&q=${encodeURIComponent(searchQuery.value.trim())}`,
+      `/api/v1/search?${params.toString()}`,
     )
   } catch (cause) {
     error.value = cause.message
+  }
+}
+
+const pollSync = async () => {
+  if (!syncJob.value) return
+  try {
+    syncJob.value = await request(`/api/v1/sync/jobs/${encodeURIComponent(syncJob.value.id || syncJob.value.job_id)}`)
+    if (['queued', 'running', 'cancel_requested'].includes(syncJob.value.status)) {
+      syncTimer.value = setTimeout(pollSync, 350)
+    } else {
+      await loadAccounts()
+    }
+  } catch (cause) {
+    syncError.value = cause.message
+  }
+}
+
+const startSync = async () => {
+  if (!selectedAccount.value || !packageName.value.trim()) return
+  syncError.value = ''
+  syncJob.value = null
+  try {
+    syncJob.value = await request(`/api/v1/accounts/${encodeURIComponent(selectedAccount.value.id)}/sync/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ package_name: packageName.value.trim() }),
+    })
+    await pollSync()
+  } catch (cause) {
+    syncError.value = cause.message
+  }
+}
+
+const cancelSync = async () => {
+  if (!syncJob.value) return
+  try {
+    syncJob.value = await request(`/api/v1/sync/jobs/${encodeURIComponent(syncJob.value.job_id || syncJob.value.id)}/cancel`, { method: 'POST' })
+    await pollSync()
+  } catch (cause) {
+    syncError.value = cause.message
   }
 }
 
@@ -118,6 +169,9 @@ const openSearchResult = async (result) => {
 }
 
 onMounted(loadAccounts)
+onUnmounted(() => {
+  if (syncTimer.value) clearTimeout(syncTimer.value)
+})
 </script>
 
 <template>
@@ -169,8 +223,26 @@ onMounted(loadAccounts)
         <template v-else>
           <div class="reader-header">
             <div><p class="section-kicker">{{ selectedAccount.display_name }}</p><h2>{{ selectedConversation?.title || '会话列表' }}</h2></div>
-            <label class="search-box"><span class="sr-only">搜索当前账号</span><input v-model="searchQuery" placeholder="搜索消息" @keyup.enter="search" /><button type="button" @click="search">搜索</button></label>
+            <div class="search-tools">
+              <label class="search-box"><span class="sr-only">搜索当前账号</span><input v-model="searchQuery" placeholder="搜索消息" @keyup.enter="search" /><button type="button" @click="search">搜索</button></label>
+              <div class="search-filters">
+                <select v-model="searchType" aria-label="消息类型"><option value="">所有类型</option><option value="text">文本</option><option value="image">图片</option><option value="file">文件</option></select>
+                <input v-model="searchFrom" type="date" aria-label="开始日期" />
+                <input v-model="searchTo" type="date" aria-label="结束日期" />
+              </div>
+            </div>
           </div>
+
+          <form class="sync-panel" @submit.prevent="startSync">
+            <div><p class="section-kicker">MANUAL IMPORT</p><strong>手动同步导入包</strong><small>只接受服务器 imports 目录下的相对包名</small></div>
+            <input v-model="packageName" placeholder="例如：account-a-export" :disabled="['queued', 'running', 'cancel_requested'].includes(syncJob?.status)" />
+            <button type="submit" :disabled="!packageName.trim() || ['queued', 'running', 'cancel_requested'].includes(syncJob?.status)">{{ syncJob?.status === 'running' ? '同步中…' : '开始同步' }}</button>
+            <button v-if="['queued', 'running', 'cancel_requested'].includes(syncJob?.status)" type="button" class="cancel-button" @click="cancelSync">取消</button>
+            <span v-if="syncJob" class="sync-status">{{ syncJob.status }} · {{ syncJob.phase || 'queued' }}</span>
+            <span v-if="syncJob?.error_message" class="sync-error">{{ syncJob.error_message }}</span>
+            <span v-if="syncJob?.stats_json" class="sync-status">统计：{{ syncJob.stats_json }}</span>
+            <span v-if="syncError" class="sync-error">{{ syncError }}</span>
+          </form>
 
           <div v-if="searchResults.length" class="search-results">
             <p class="section-kicker">SEARCH RESULTS · {{ searchResults.length }}</p>
