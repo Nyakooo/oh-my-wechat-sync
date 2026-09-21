@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-项目当前处于 **Phase 0：技术验证闸门**，还没有开始实现完整的同步服务或 Web UI。
+项目当前处于 **Phase 0 真实来源验证 + Phase 1 Import-first 归档核心实现**阶段，还没有开始实现完整的同步服务或 Web UI。
 
 当前最高优先级是验证：
 
@@ -19,7 +19,7 @@
   -> 至少一种媒体
 ```
 
-Linux Docker Runtime、外置 Windows Agent 和离线数据导入目前都是候选路线，不能在 P0 验证完成前视为已支持功能。
+当前 V1 实现路线暂定为离线导入优先：归档核心只接收版本化导入包，不依赖 Linux Docker Runtime 的内部数据库。Linux Runtime、外置 Windows Agent 和真实数据导入仍需单独完成来源验证，不能视为已支持的真实微信同步功能。
 
 ## 产品边界
 
@@ -41,6 +41,7 @@ Linux Docker Runtime、外置 Windows Agent 和离线数据导入目前都是候
 - [P0 Runtime 验证运行手册](./docs/p0-runtime-validation-runbook.md)：启动固定候选 Runtime、扫码和回填验证证据；
 - [P0 一次性 Compose 配置](./docs/p0-runtime-compose.yaml)：仅用于 Phase 0 验证，不是生产部署配置；
 - [P0 Runtime 路线评估](./docs/p0-route-assessment.md)：Linux Runtime、Windows Agent 和离线导入的阶段性判断；
+- [Import-first 实现路线](./docs/import-first-architecture.md)：当前 Ubuntu-only 条件下的归档核心边界和验证方式；
 - [技术架构与可执行开发计划](./微信个人增量备份系统——技术架构与可执行开发计划.md)：完整架构、数据模型、同步流程、API、部署和风险说明。
 
 ## 开发顺序
