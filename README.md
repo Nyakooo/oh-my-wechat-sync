@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-项目当前处于 **Phase 0 真实来源验证 + Phase 2 Import-first 同步编排 + Phase 3 API 子集**阶段，已具备离线导入、归档查询和基础账号管理 API，但还没有接入真实微信来源和完整 Web UI。
+项目当前处于 **Phase 0 真实来源验证 + Phase 2 Import-first 同步编排 + Phase 3 API/Phase 4 Web 子集**阶段，已具备离线导入、归档查询、基础账号管理 API 和只读 Dashboard，但还没有接入真实微信来源。
 
 当前最高优先级是验证：
 
