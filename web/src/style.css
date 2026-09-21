@@ -64,6 +64,9 @@ h2 { margin: 6px 0 0; font-size: 21px; letter-spacing: -.02em; }
 .message-meta { display: flex; justify-content: space-between; gap: 16px; color: #4e655b; font-size: 13px; }
 .message-item p { margin: 8px 0 5px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .attachment-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.attachment-card { display: grid; gap: 5px; max-width: 260px; }
+.attachment-card img, .attachment-card video { display: block; max-width: 260px; max-height: 180px; border-radius: 8px; object-fit: cover; }
+.attachment-card audio { max-width: 260px; }
 .attachment-note { color: #5d9279; text-decoration: none; }
 .attachment-note:hover { text-decoration: underline; }
 .pager { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 18px 0 2px; color: #899591; font-size: 12px; }

@@ -36,6 +36,9 @@ const formatTime = (value) => {
   return new Date(value).toLocaleString('zh-CN', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
+const mediaUrl = (attachment) => `/api/v1/accounts/${encodeURIComponent(selectedAccount.value.id)}/attachments/${encodeURIComponent(attachment.id)}/content`
+const isMime = (attachment, prefix) => (attachment.mime_type || '').startsWith(prefix)
+
 const loadAccounts = async () => {
   loading.value = true
   error.value = ''
@@ -262,7 +265,12 @@ onUnmounted(() => {
                 <div class="message-meta"><strong>{{ message.is_self ? '我' : (message.sender_display_name || '未知联系人') }}</strong><time>{{ formatTime(message.source_created_at) }}</time></div>
                 <p>{{ message.content || `[${message.type}]` }}</p>
                 <div v-if="message.attachments.length" class="attachment-list">
-                  <a v-for="attachment in message.attachments" :key="attachment.id" class="attachment-note" :href="`/api/v1/accounts/${encodeURIComponent(selectedAccount.id)}/attachments/${encodeURIComponent(attachment.id)}/content`" target="_blank" rel="noopener">{{ attachment.original_name || attachment.kind }}</a>
+                  <div v-for="attachment in message.attachments" :key="attachment.id" class="attachment-card">
+                    <img v-if="isMime(attachment, 'image/')" :src="mediaUrl(attachment)" :alt="attachment.original_name || attachment.kind" loading="lazy" />
+                    <video v-else-if="isMime(attachment, 'video/')" :src="mediaUrl(attachment)" controls preload="metadata"></video>
+                    <audio v-else-if="isMime(attachment, 'audio/')" :src="mediaUrl(attachment)" controls preload="metadata"></audio>
+                    <a class="attachment-note" :href="mediaUrl(attachment)" target="_blank" rel="noopener">{{ attachment.original_name || attachment.kind }}</a>
+                  </div>
                 </div>
               </article>
               <div v-if="messages.length" class="pager">
