@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-项目当前处于 **Phase 0 真实来源验证 + Phase 1 Import-first 归档核心实现**阶段，还没有开始实现完整的同步服务或 Web UI。
+项目当前处于 **Phase 0 真实来源验证 + Phase 2 Import-first 同步编排 + Phase 3 API 子集**阶段，已具备离线导入、归档查询和基础账号管理 API，但还没有接入真实微信来源和完整 Web UI。
 
 当前最高优先级是验证：
 
@@ -20,6 +20,18 @@
 ```
 
 当前 V1 实现路线暂定为离线导入优先：归档核心只接收版本化导入包，不依赖 Linux Docker Runtime 的内部数据库。Linux Runtime、外置 Windows Agent 和真实数据导入仍需单独完成来源验证，不能视为已支持的真实微信同步功能。
+
+当前可运行的 API 包括：
+
+- `GET /healthz`：服务、归档数据库和基础统计；
+- `GET/POST/PATCH/DELETE /api/v1/accounts`：账号管理，删除需要显式 `confirm=true`；
+- `GET /api/v1/accounts/{account_id}/conversations`：分页会话列表；
+- `GET /api/v1/accounts/{account_id}/conversations/{conversation_id}/messages`：分页消息和附件元数据；
+- `GET /api/v1/accounts/{account_id}/attachments/{attachment_id}/content`：受账号范围约束的媒体读取；
+- `GET /api/v1/search?account_id=...&q=...`：账号范围内的 FTS5 搜索；
+- `GET /api/v1/sync/jobs/{job_id}`：读取导入同步任务结果。
+
+API 默认使用 `data/archive.db` 和 `data` 媒体目录，可通过 `WECHAT_ARCHIVE_DB`、`WECHAT_ARCHIVE_ROOT` 调整。
 
 ## 产品边界
 
@@ -73,6 +85,14 @@ Phase 6  V1 稳定化
 7. 不把未验证的社区 Runtime 或解密方案写成稳定依赖。
 
 ## 开发前置
+
+本地启动基础 API：
+
+```bash
+python -m uvicorn backend.app.main:app --reload
+```
+
+导入包仍建议先通过 CLI 或 `SyncOrchestrator` 执行，再从 API 浏览归档数据。API 当前不接受任意客户端文件路径，也不伪造 Runtime 启停和扫码状态。
 
 开始 P0 前准备：
 
