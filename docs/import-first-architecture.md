@@ -19,8 +19,10 @@
 入口位于 [`archive_core`](../archive_core)：
 
 - SQLite WAL、外键和 FTS5 初始化；
+- schema version 1 的可重复迁移入口；
 - accounts、contacts、conversations、conversation_members、messages、attachments、sync_jobs、sync_checkpoints 表；
 - 标准化 `Source*` DTO；
+- `ImportAdapter` 协议边界和离线导入 CLI；
 - 导入事务和失败回滚；
 - `(account_id, source_msg_id)` 消息幂等；
 - 按 SHA-256 的媒体文件去重；
@@ -31,6 +33,8 @@
 
 ```bash
 python3 -B -m unittest discover -s tests -p 'test_*.py'
+python3 -B tools/archive_import.py tests/fixtures/import-v0-minimal \
+  --db /tmp/archive.db --data /tmp/archive-data --account-id demo
 ```
 
 测试只证明合成输入能够正确进入归档核心，不证明真实微信数据已经可读取。
