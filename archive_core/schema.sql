@@ -88,6 +88,9 @@ CREATE TABLE IF NOT EXISTS sync_jobs (
     stats_json TEXT
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_jobs_one_initial_per_account
+    ON sync_jobs(account_id) WHERE trigger = 'initial';
+
 CREATE TABLE IF NOT EXISTS sync_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     job_id TEXT NOT NULL REFERENCES sync_jobs(id),
