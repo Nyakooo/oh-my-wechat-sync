@@ -183,7 +183,7 @@ onUnmounted(() => {
       <div>
         <p class="eyebrow">WECHAT ARCHIVE / READ-ONLY</p>
         <h1>微信聊天归档</h1>
-        <p class="subtitle">手动导入、独立保存，只读浏览。</p>
+        <p class="subtitle">目标：扫码登录后自动首次归档；之后由你手动触发增量同步。</p>
       </div>
       <button class="quiet-button" type="button" :disabled="loading" @click="loadAccounts">
         {{ loading ? '刷新中…' : '刷新' }}
@@ -195,7 +195,7 @@ onUnmounted(() => {
     <section class="overview-grid" aria-label="归档概览">
       <article class="stat-card"><span>归档账号</span><strong>{{ health?.counts?.accounts ?? accounts.length }}</strong></article>
       <article class="stat-card"><span>归档消息</span><strong>{{ health?.counts?.messages ?? 0 }}</strong></article>
-      <article class="stat-card stat-card--note"><span>当前模式</span><strong>Import-first</strong></article>
+      <article class="stat-card stat-card--note"><span>产品目标</span><strong>扫码后自动首次同步</strong></article>
     </section>
 
     <section class="workspace">
@@ -204,7 +204,7 @@ onUnmounted(() => {
           <div><p class="section-kicker">ACCOUNTS</p><h2>我的账号</h2></div>
           <span class="count-badge">{{ accounts.length }}</span>
         </div>
-        <div v-if="!accounts.length" class="empty-state">还没有归档账号。请先通过导入 API 写入一份脱敏导入包。</div>
+        <div v-if="!accounts.length" class="empty-state">还没有账号。目标流程是添加账号、扫码登录后自动首次归档；当前 Runtime 尚未接入。</div>
         <button
           v-for="account in accounts"
           :key="account.id"
@@ -237,7 +237,7 @@ onUnmounted(() => {
           </div>
 
           <form class="sync-panel" @submit.prevent="startSync">
-            <div><p class="section-kicker">MANUAL IMPORT</p><strong>手动同步导入包</strong><small>只接受服务器 imports 目录下的相对包名</small></div>
+            <div><p class="section-kicker">DEVELOPMENT DEMO</p><strong>离线导入（开发演示）</strong><small>扫码自动同步尚未接入；此入口仅用于合成/兼容导入测试</small></div>
             <input v-model="packageName" placeholder="例如：account-a-export" :disabled="['queued', 'running', 'cancel_requested'].includes(syncJob?.status)" />
             <button type="submit" :disabled="!packageName.trim() || ['queued', 'running', 'cancel_requested'].includes(syncJob?.status)">{{ syncJob?.status === 'running' ? '同步中…' : '开始同步' }}</button>
             <button v-if="['queued', 'running', 'cancel_requested'].includes(syncJob?.status)" type="button" class="cancel-button" @click="cancelSync">取消</button>
