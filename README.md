@@ -59,6 +59,7 @@ API 默认使用 `data/archive.db`、`data` 媒体目录和 `imports` 导入根�
 - [Docker 部署配置](./deploy/compose.yaml)：单容器 API + 静态 Web、`/data` 归档卷和只读 `imports` 卷；
 - [部署安全边界](./docs/deployment-security.md)：Docker Socket、导入卷、媒体路径和当前认证限制；
 - [数据迁移手册](./docs/data-migration-runbook.md)：SQLite+媒体快照、恢复、升级和回滚；
+- [合成演示数据](./docs/demo-data.md)：手动创建可浏览、可搜索并带媒体的纯虚构样本；
 - [技术架构与可执行开发计划](./微信个人增量备份系统——技术架构与可执行开发计划.md)：完整架构、数据模型、同步流程、API、部署和风险说明。
 
 ## 开发顺序
@@ -114,6 +115,8 @@ docker compose -f deploy/compose.yaml up -d --build
 python tools/archive_health.py --database data/archive.db --archive-root data --pretty
 python tools/rebuild_fts.py --database data/archive.db
 ```
+
+需要展示完整页面时，可按[合成演示数据说明](./docs/demo-data.md)手动生成专用样本账号；部署和首次启动默认不会导入示例内容。
 
 开始 P0 前准备：
 
